@@ -1,68 +1,67 @@
-module counter(
-    input [7:0] ctr,
-    input ctrl, mode, clk,
-    output [7:0] out
-);
+module myDecoder1(inValue, outSeg);
+	input [3:0] inValue;
+	output reg [6:0] outSeg;
 
-wire [7:0] temp_js, n_temp_js;
-wire [7:0] temp_rg, n_temp_rg;
+	always @(inValue)
+		begin
+			case(inValue)
+				4'b0000: outSeg = 7'b1000000;
+				4'b0001: outSeg = 7'b1111001;
+				4'b0010: outSeg = 7'b0100100;
+				4'b0011: outSeg = 7'b0110000;
+				4'b0100: outSeg = 7'b0011001;
+				4'b0101: outSeg = 7'b0010010;
+				4'b0110: outSeg = 7'b0000010;
+				4'b0111: outSeg = 7'b1111000;
+				4'b1000: outSeg = 7'b0000000;
+				4'b1001: outSeg = 7'b0011000;
+				4'b1010: outSeg = 7'b0001000;
+				4'b1011: outSeg = 7'b0000011;
+				4'b1100: outSeg = 7'b1000110;
+				4'b1101: outSeg = 7'b0100001;
+				4'b1110: outSeg = 7'b0000110;
+				4'b1111: outSeg = 7'b0001110;
+					
+				default: outSeg = 7'b1000000;
+			endcase
+		end
+endmodule
 
-assign temp_js = (mode == 1) ? 8'b00000000 : 8'b10000000;
-assign temp_rg = (mode == 0) ? 8'b00000000 : 8'b10000000;
-assign n_temp_js = ~temp_js;
-assign n_temp_rg = ~temp_rg;
 
-johnson js(temp_js[7:4], clk, temp_js[7:4], n_temp_js[7:4]);
-ring rg(temp_rg, clk, temp_rg, n_temp_rg);
+module D_FF (input D, input CLK, output reg Q);
+	always @(posedge CLK)
+	begin 
+		if(D==1) begin
+			Q=1;
+		end
+		else begin
+			Q = 0;
+		end
+	end
+endmodule
 
-assign out = (mode == 1) ? temp_js : temp_rg;
+module counter(input clk, input mode, input lo, input [3:0]load, output [3:0]Q, output [6:0]seg);
+	reg [3:0]temp;
+	always @(negedge clk) begin
+			if(mode) begin //johnson
+				temp[3:1] = Q[2:0];
+				temp[0] = ~Q[3];
+			end
+			else begin
+				temp[3:1] = Q[2:0];
+				temp[0]=Q[3];
+			end
+			
+			if(lo) begin
+				temp=load;
+			end
+	end
 
-endmodule // counter
+	D_FF f0(temp[0], clk, Q[0]);
+	D_FF f1(temp[1], clk, Q[1]);
+	D_FF f2(temp[2], clk, Q[2]);
+	D_FF f3(temp[3], clk, Q[3]);
 
-// ---------------------------------
-
-module DFF( 
-    input D, clk,
-    output reg Q, Qnot
-);
-
-always @ (posedge clk) begin
-    Q <= D;
-    Qnot <= ~Q;
-end
-
-endmodule // DFF
-
-// ---------------------------------
-// module DFF( input D, clk, output reg Q, Qnot);
-module johnson(
-    input [3:0] in,
-    input clk,
-    output [3:0] Q, Qnot
-);
-
-DFF DFF0(in[3], clk, Q[0], Qnot[0]);
-DFF DFF1(in[0], clk, Q[1], Qnot[1]);
-DFF DFF2(in[1], clk, Q[2], Qnot[2]);
-DFF DFF3(in[2], clk, Q[3], Qnot[3]);
-
-endmodule // johnson
-
-// ---------------------------------
-
-module ring(
-    input [7:0] in,
-    input clk,
-    output [7:0] Q, Qnot
-);
-
-DFF DFF0(in[7], clk, Q[0], Qnot[0]);
-DFF DFF1(in[0], clk, Q[1], Qnot[1]);
-DFF DFF2(in[1], clk, Q[2], Qnot[2]);
-DFF DFF3(in[2], clk, Q[3], Qnot[3]);
-DFF DFF4(in[3], clk, Q[4], Qnot[4]);
-DFF DFF5(in[4], clk, Q[5], Qnot[5]);
-DFF DFF6(in[5], clk, Q[6], Qnot[6]);
-DFF DFF7(in[6], clk, Q[7], Qnot[7]);
+	myDecoder1 dd(Q, seg);
 
 endmodule
